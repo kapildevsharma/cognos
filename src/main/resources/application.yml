@@ -1,0 +1,79 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  #health,info,metrics,env
+  endpoint:
+    health:
+      show-details: "always"  # Show detailed health info
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/tenant_db
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  flyway:
+    enabled: false
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: utp_group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+cognos-sdk:
+  environments:
+   #never use the primary or specify a default cognos env in cognos-sdk to avoid potential coding errors using default instead of right env
+    test:
+      dispatcher-url: http://cognosutpcdsp.mia.ucloud.int:9300/p2pd/servlet/dispatch
+      user:
+        namespace: cognosutpcdsp.mia.ucloud.int
+        username: administrator
+        password: "!@bZjbQQ!9tz"
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      circuitBreakerService:
+        registerHealthIndicator: true #Integrates with Spring Boot actuator health endpoint.
+        slidingWindowSize: 10 #Number of calls used to calculate the failure rate. Here, the circuit breaker looks at the last 10 calls.
+        failureRateThreshold: 50 #  If 50% or more of the calls fail in the sliding window, the circuit breaker opens.
+        waitDurationInOpenState: 5s # When the circuit is OPEN, it will stay open for 10 seconds before transitioning to HALF_OPEN.
+        automaticTransitionFromOpenToHalfOpenEnabled: true # Enables automatic transition from OPEN to HALF_OPEN after the waitDurationInOpenState elapses 
+        permittedNumberOfCallsInHalfOpenState: 3 #While in HALF_OPEN state, only 3 test calls are allowed. If they succeed, the circuit closes again. If even one fails (depending on other config), it may go back to OPEN.
+        minimumNumberOfCalls: 5  # Circuit breaker won’t calculate failure rate unless at least 5 calls have been made
+        eventConsumerBufferSize: 10 # Number of events stored for circuit breaker monitoring. Helps with debugging and metrics
+        slidingWindowType: COUNT_BASED #  Uses a fixed number of calls (here 10) to calculate failure rate
+
+  retry:
+    instances:
+      retryService:
+        maxAttempts: 3 # Number of retry attempts
+        waitDuration: 10s # Wait duration between retries
+        retryExceptions:
+         - java.io.IOException
+         - org.springframework.web.client.HttpServerErrorException
+      #  enableExponentialBackoff: true # Optional for backoff strategy
+      #  exponentialBackoffMultiplier: 2 # Multiplier for backoff (optional)
+
+logging.level.root: INFO
+# Cognos Environment Manager Properties
+cognos.api.url: https://ap1.ca.analytics.ibm.com/api/v1
+cognos.api.cam-token : MTsxMDE6NDZlMjUyMWUtZTY2My0zNGY1LTU4YTQtYzZkMTJiZTEzMjlhOjQxMzg1MzkyMjQ7MDszOzA7
+cognos.api.xsrf-token : QLqQeBMBvfbLSlGjNJE6D-Yu0H4nWLau
+cognos.username: admin
+cognos.password: admin
+cognos.namespace: Cognos
+cognos.dispatcher.url: http://localhost:9300/p2pd/servlet/dispatch
+cognos.developer.url: http://developer.cognos.com/schemas/bibus/3/
+
